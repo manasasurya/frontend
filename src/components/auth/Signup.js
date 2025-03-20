@@ -26,6 +26,7 @@ const Signup = () => {
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     role: 'USER'
   });
   const [error, setError] = useState('');
@@ -37,52 +38,88 @@ const Signup = () => {
     });
   };
 
+  const validateForm = () => {
+    if (!formData.name?.trim()) {
+      setError('Name is required');
+      return false;
+    }
+    if (!formData.email?.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    if (!formData.password?.trim()) {
+      setError('Password is required');
+      return false;
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+    if (!formData.confirmPassword?.trim()) {
+      setError('Please confirm your password');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      console.log('Form data before submission:', formData);
-      
-      // Create a copy of formData with the role as a string enum
+      // Ensure role is properly set
       const requestData = {
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         password: formData.password,
-        role: formData.role // Send role as is - backend expects 'USER' or 'ADMIN'
+        role: formData.role || 'USER'
       };
 
-      console.log('Request data:', requestData);
+      console.log('Sending registration request:', requestData);
 
+      // Remove confirmPassword before sending to backend
+      const { confirmPassword, ...dataToSend } = requestData;
+      
       const response = await axios.post(
-        'http://localhost:8080/api/auth/register', 
-        requestData,
+        'http://localhost:8081/api/auth/register',
+        dataToSend,
         {
           headers: {
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 5000 // 5 second timeout
         }
       );
 
-      console.log('Registration response:', response);
+      console.log('Registration successful:', response.data);
 
-      if (response.data && response.data.token) {
+      if (response.data?.token) {
         localStorage.setItem('token', response.data.token);
         navigate('/');
       } else {
-        setError('Invalid response from server - no token received');
+        setError('Registration successful but no token received');
       }
     } catch (error) {
-      console.error('Registration error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      console.error('Registration failed:', error.response || error);
       
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data || 
-                          error.message || 
+      const errorMessage = error.response?.data ||
+                          error.message ||
                           'Registration failed. Please try again.';
       
-      setError(errorMessage);
+      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
     }
   };
 
@@ -137,6 +174,22 @@ const Signup = () => {
               name="password"
               type="password"
               value={formData.password}
+              onChange={handleChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock sx={{ color: '#00aa6c' }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <TextField
+              required
+              fullWidth
+              label="Confirm Password"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
               onChange={handleChange}
               InputProps={{
                 startAdornment: (

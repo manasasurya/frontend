@@ -46,7 +46,8 @@ const Register = () => {
     }
     try {
       const { confirmPassword, ...registrationData } = formData;
-      const response = await authService.register(registrationData);
+      // Explicitly set role as USER for regular registration
+      const response = await authService.register({ ...registrationData, role: 'USER' });
       localStorage.setItem('token', response.data.token);
       navigate('/');
     } catch (error) {

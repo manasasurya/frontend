@@ -15,10 +15,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api';
 import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -26,6 +28,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -36,13 +39,46 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
     try {
       const response = await authService.login(formData);
-      localStorage.setItem('token', response.data.token);
-      navigate('/');
+      console.log('Login response:', response.data);
+      
+      if (response.data?.token) {
+        // Log authentication details
+        console.log('Authentication successful');
+        console.log('Token:', response.data.token);
+        console.log('Role:', response.data.role);
+        
+        // Update auth context with token
+        authLogin(response.data.token);
+        
+        // Navigate to home page after a short delay to allow context to update
+        setTimeout(() => {
+          console.log('Navigating to home page...');
+          navigate('/', { replace: true });
+        }, 100);
+      } else {
+        console.error('Invalid response format:', response.data);
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
-      setError('Invalid email or password');
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        setError(error.response.data.message || 'Authentication failed');
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        setError('No response from server');
+      } else {
+        console.error('Error details:', error.message);
+        setError('An error occurred during login');
+      }
       setOpenSnackbar(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,8 +151,9 @@ const Login = () => {
               fullWidth
               variant="contained"
               className="auth-submit-button"
+              disabled={isLoading}
             >
-              Sign In
+              {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
             <Typography variant="body2" className="auth-switch-text">
               Don't have an account?{' '}

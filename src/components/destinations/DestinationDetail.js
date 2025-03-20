@@ -70,7 +70,7 @@ const DestinationDetail = () => {
   useEffect(() => {
     const fetchDestination = async () => {
       try {
-        const response = await axios.get(`http://localhost:8080/api/destinations/${id}`);
+        const response = await axios.get(`http://localhost:8081/api/destinations/${id}`);
         setDestination(response.data);
         setGalleryImages(getAdditionalImages(response.data.location));
         setLoading(false);
